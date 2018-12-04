@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>US States By Population By Race</title>
+<style>
+
+.land {
+  fill: #fff;
+  stroke: #ccc;
+}
+
+.state {
+  fill: #ccc;
+  stroke: #666;
+}
+
+</style>
+<body>
+  <h1>
+    US States By Population By Race
+  </h1>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+
+    <form>
+      <label><input type="radio" name="race" id="asian"> asian</label>
+      <label><input type="radio" name="race" id="white"> white</label>
+      <label><input type="radio" name="race" id="africanamerican"> african american</label>
+      <label><input type="radio" name="race" id="nativeamerican" checked> native american</label>
+      <label><input type="radio" name="race" id="pacificislander"> pacific islander</label>
+  </form>
+
+
+<script>
+
+
+
+var path = d3.geo.path();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", 960)
+    .attr("height", 500);
+
+
+var color = d3.scale.linear()
+    .range(['white', 'red', 'fuchsia', 'purple','black']);
+
+var stuff = []
+
+d3.tsv('data.tsv', function(data){
+    stuff.push(data)
+    var scale = d3.extent(data, function(x){return +x.asian})
+    var scale = scale.concat(d3.extent(data, function(x){return +x.black}))
+    var scale = scale.concat(d3.extent(data, function(x){return +x.white}))
+    var scale = scale.concat(d3.extent(data, function(x){return +x.native}))
+    var scale = scale.concat(d3.extent(data, function(x){return +x.pacisland}))
+    color.domain(d3.extent(scale))
+
+});
+
+getinfo = function(x){
+  return stuff[0].filter(function(z){return String(z.id) == x});
+};
+
+
+d3.json("us.json", function(error, us) {
+  if (error) throw error;
+
+// this part makes the full map
+  svg.append("path")
+      .datum(topojson.feature(us, us.objects.land))
+      .attr("class", "land")
+      .attr("d", path);
+
+
+// modify the json so it has the info you need in the actual object
+
+var all_states = topojson.feature(us, us.objects.states).features;
+all_states.forEach(function(d){d.info = getinfo(d.id)[0]});
+var all_states = all_states.filter(function(d){return d.info != undefined});
+all_states.forEach(function(d){d.state = d.info.state});
+
+//make the states
+
+  svg.selectAll(".state")
+      .data(all_states)
+      .enter().append("path")
+      .attr("class", "state")
+      .attr("d", path);
+
+// label the states
+ svg.selectAll("text")
+    .data(all_states)
+    .enter()
+    .append("svg:text")
+    .text(function(d){return d.info.state})
+    .attr("x", function(d){
+        return path.centroid(d)[0];
+    })
+    .attr("y", function(d){
+        return  path.centroid(d)[1];
+    })
+    .attr("text-anchor","middle")
+    .attr('font-size','6pt');
+
+  });
+
+
+var asians = function(){
+  d3.selectAll('.state').transition().duration(800).style('fill',function(d){return color(+d.info.asian)});
+};
+
+var whites = function(){
+  d3.selectAll('.state').transition().duration(800).style('fill',function(d){return color(+d.info.white)});
+};
+
+var afro_am = function(){
+d3.selectAll('.state').transition().duration(800).style('fill',function(d){return color(+d.info.black)});
+};
+
+var native_am = function(){
+d3.selectAll('.state').transition().duration(800).style('fill',function(d){return color(+d.info.native)});
+};
+
+var pacisland = function(){
+d3.selectAll('.state').transition().duration(800).style('fill',function(d){return color(+d.info.pacisland)});
+};
+
+
+d3.selectAll('#asian').on('change', asians);
+d3.selectAll('#white').on('change', whites);
+d3.selectAll('#africanamerican').on('change', afro_am);
+d3.selectAll('#nativeamerican').on('change', native_am);
+d3.selectAll('#pacificislander').on('change', pacisland);
+
+
+
+
+
+</script>
